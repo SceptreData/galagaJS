@@ -124,16 +124,43 @@ Object.defineProperty(exports, "__esModule", {
   value: true
 });
 exports.clearCanvas = clearCanvas;
+exports.buildStars = buildStars;
+exports.updateStarField = updateStarField;
 exports.Draw = void 0;
-var bgColor = "#333333";
+var BG_COLOR = '#333333';
+var NUM_STARS = 20;
 
 function clearCanvas(canvas, ctx) {
   var width = canvas.width,
       height = canvas.height;
   ctx.clearRect(0, 0, width, height);
-  setStroke(ctx, "#111111", 0);
-  setFill(ctx, bgColor);
+  setStroke(ctx, '#111111', 0);
+  setFill(ctx, BG_COLOR);
   rect(ctx, 0, 0, width, height);
+}
+
+function buildStars(width, height) {
+  var starField = [];
+
+  for (var i = 0; i < NUM_STARS; i++) {
+    var star = {
+      x: Math.floor(Math.random() * (width - 1)),
+      y: Math.floor(Math.random() * (height - 1)),
+      vy: Math.ceil(Math.random() * 5)
+    };
+    starField.push(star);
+  }
+
+  return starField;
+}
+
+function updateStarField(canvas, stars) {
+  var ctx = canvas.getContext('2d');
+  stars.forEach(function (star) {
+    star.y = (star.y + star.vy + canvas.height) % canvas.height;
+    setFill(ctx, '#eee');
+    circle(ctx, star.x, star.y, 3);
+  });
 }
 
 function setStroke(ctx, color) {
@@ -194,8 +221,6 @@ exports.Entity = Entity;
 
 var _draw = require("./draw.js");
 
-function _readOnlyError(name) { throw new Error("\"" + name + "\" is read-only"); }
-
 function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
 
 function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
@@ -207,7 +232,7 @@ function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 function Entity(canvas, ctx, attrs) {
   this.canvas = canvas;
   this.ctx = ctx;
-  this.type = "";
+  this.type = '';
   this.timeCreated = Date.now();
   this.width = 50;
   this.height = 50;
@@ -226,7 +251,7 @@ Entity.prototype.render = function () {
       y = _this$position[1];
 
   if (boundRect) {
-    _draw.Draw.setStroke(this.ctx, "#eee");
+    _draw.Draw.setStroke(this.ctx, '#eee');
 
     _draw.Draw.rect(this.ctx, x, y, this.width, this.height);
   }
@@ -247,9 +272,19 @@ Entity.prototype.update = function () {
         vy = _this$velocity[1]; // Clamp speeds here.
 
 
-    x += (_readOnlyError("x"), vx);
-    y += (_readOnlyError("y"), vy);
+    x += vx;
+    y += vy;
+
+    if (x + this.width >= this.canvas.width) {
+      x = this.canvas.width - this.width - 1; // vx = -vx;
+    }
+
+    if (y + this.height >= this.canvas.height) {
+      y = this.canvas.height - this.height; // vy = -vy;
+    }
+
     this.position = [x, y];
+    this.velocity = [vx, vy];
   }
 };
 },{"./draw.js":"js/draw.js"}],"js/main.js":[function(require,module,exports) {
@@ -259,27 +294,39 @@ var _draw = require("./draw.js");
 
 var _entity = require("./entity");
 
-function _typeof(obj) { if (typeof Symbol === "function" && typeof Symbol.iterator === "symbol") { _typeof = function _typeof(obj) { return typeof obj; }; } else { _typeof = function _typeof(obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; }; } return _typeof(obj); }
-
-var canvas = document.querySelector("#gameCanvas");
-var ctx = canvas.getContext("2d");
-var FPS = 60;
+var canvas = document.querySelector('#gameCanvas');
+var ctx = canvas.getContext('2d');
+var FPS = 1000 / 60;
+var lastTime = new Date().getTime(),
+    curTime = 0,
+    delta = 0;
 var entities = [];
-var hero = new _entity.Entity(canvas, ctx);
+var starField = (0, _draw.buildStars)(canvas.width, canvas.height);
+console.log(starField);
+var hero = new _entity.Entity(canvas, ctx, {
+  velocity: [10, 0]
+});
 
 function gameLoop() {
-  (0, _draw.clearCanvas)(canvas, ctx); // update();
+  window.requestAnimationFrame(gameLoop);
+  curTime = new Date().getTime();
+  delta = curTime - lastTime;
 
-  render();
-} // If our canvas exists, start the game loop @ 60 Frames Per Second
-// (This isn't technically the best way to do a game loop but it will serve for now)
-
-
-if (_typeof(canvas.getContext) !== undefined) {
-  setInterval(gameLoop, 1000 / FPS);
+  if (delta > FPS) {
+    (0, _draw.clearCanvas)(canvas, ctx);
+    update();
+    render();
+  }
 }
 
+gameLoop(); // If our canvas exists, start the game loop @ 60 Frames Per Second
+// (This isn't technically the best way to do a game loop but it will serve for now)
+// if (typeof canvas.getContext !== undefined) {
+//   setInterval(gameLoop, 1000 / FPS);
+// }
+
 function update() {
+  (0, _draw.updateStarField)(canvas, starField);
   hero.update();
 }
 
@@ -291,7 +338,7 @@ function render() {
 // setStroke("white", width = 0);
 // setFill("green");
 // circle(200, 200, 100)
-},{"./draw.js":"js/draw.js","./entity":"js/entity.js"}],"node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
+},{"./draw.js":"js/draw.js","./entity":"js/entity.js"}],"../../../.config/yarn/global/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
 var OldModule = module.bundle.Module;
@@ -319,7 +366,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "59411" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "57479" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};
@@ -495,5 +542,5 @@ function hmrAcceptRun(bundle, id) {
     return true;
   }
 }
-},{}]},{},["node_modules/parcel-bundler/src/builtins/hmr-runtime.js","js/main.js"], null)
+},{}]},{},["../../../.config/yarn/global/node_modules/parcel-bundler/src/builtins/hmr-runtime.js","js/main.js"], null)
 //# sourceMappingURL=/main.fb6bbcaf.js.map

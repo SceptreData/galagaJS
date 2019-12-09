@@ -1,33 +1,48 @@
-import {Draw, clearCanvas} from "./draw.js";
-import {Entity} from "./entity"
+import { Draw, clearCanvas, buildStars, updateStarField } from './draw.js';
+import { Entity } from './entity';
 
-const canvas = document.querySelector("#gameCanvas");
-const ctx = canvas.getContext("2d")
+const canvas = document.querySelector('#gameCanvas');
+const ctx = canvas.getContext('2d');
 
-const FPS = 60
+const FPS = 1000 / 60;
+
+let lastTime = new Date().getTime(),
+  curTime = 0,
+  delta = 0;
 
 const entities = [];
+const starField = buildStars(canvas.width, canvas.height);
+console.log(starField);
 
-const hero = new Entity(canvas, ctx);
+const hero = new Entity(canvas, ctx, { velocity: [10, 0] });
 
+function gameLoop() {
+  window.requestAnimationFrame(gameLoop);
 
-function gameLoop(){
+  curTime = new Date().getTime();
+  delta = curTime - lastTime;
+
+  if (delta > FPS) {
     clearCanvas(canvas, ctx);
-    // update();
+    update();
     render();
+  }
 }
+gameLoop();
+
 // If our canvas exists, start the game loop @ 60 Frames Per Second
 // (This isn't technically the best way to do a game loop but it will serve for now)
-if (typeof canvas.getContext !== undefined){
-    setInterval(gameLoop, 1000 / FPS);
+// if (typeof canvas.getContext !== undefined) {
+//   setInterval(gameLoop, 1000 / FPS);
+// }
+
+function update() {
+  updateStarField(canvas, starField);
+  hero.update();
 }
 
-function update(){
-    hero.update();
-}
-
-function render(){
-    hero.render();
+function render() {
+  hero.render();
 }
 
 // setStroke("#333");
