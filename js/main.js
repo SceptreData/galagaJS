@@ -17,6 +17,7 @@ console.log(starField);
 const hero = new Entity(canvas, ctx, { velocity: [10, 0] });
 
 function gameLoop() {
+  // Fancy browser animation magic
   window.requestAnimationFrame(gameLoop);
 
   curTime = new Date().getTime();
@@ -30,12 +31,6 @@ function gameLoop() {
 }
 gameLoop();
 
-// If our canvas exists, start the game loop @ 60 Frames Per Second
-// (This isn't technically the best way to do a game loop but it will serve for now)
-// if (typeof canvas.getContext !== undefined) {
-//   setInterval(gameLoop, 1000 / FPS);
-// }
-
 function update() {
   updateStarField(canvas, starField);
   hero.update();
@@ -44,11 +39,3 @@ function update() {
 function render() {
   hero.render();
 }
-
-// setStroke("#333");
-// setFill("tomato")
-// rect(10, 10, 50, 50, true)
-
-// setStroke("white", width = 0);
-// setFill("green");
-// circle(200, 200, 100)
