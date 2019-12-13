@@ -202,13 +202,23 @@ function image(ctx, src, x, y, w, h) {
   ctx.drawImage(src, x, y, w, h);
 }
 
+function triangle(ctx, x, y, w, h) {
+  ctx.beginPath();
+  ctx.moveTo(x, y + h);
+  ctx.lineTo(x + w / 2, y);
+  ctx.lineTo(x + w, y + h);
+  ctx.closePath();
+  ctx.fill();
+}
+
 var Draw = {
   setStroke: setStroke,
   setFill: setFill,
   rect: rect,
   circle: circle,
   clearCanvas: clearCanvas,
-  image: image
+  image: image,
+  triangle: triangle
 };
 exports.Draw = Draw;
 },{}],"js/entity.js":[function(require,module,exports) {
@@ -250,14 +260,29 @@ Entity.prototype.render = function () {
       x = _this$position[0],
       y = _this$position[1];
 
-  if (boundRect) {
+  if (boundRect || this.type === 'projectile') {
     _draw.Draw.setStroke(this.ctx, '#eee');
 
-    _draw.Draw.rect(this.ctx, x, y, this.width, this.height);
+    _draw.Draw.rect(this.ctx, x, y, this.width, this.height, false);
   }
 
   if (this.image) {
     _draw.Draw.image(this.image, x, y, this.width, this.height);
+  }
+
+  if (this.type === 'hero') {
+    _draw.Draw.setStroke(this.ctx, '#eee');
+
+    _draw.Draw.triangle(this.ctx, x, y, this.width, this.height);
+  } else if (this.type === 'enemy') {// drawEnemyImage
+  } else if (this.type === 'projectile') {
+    _draw.Draw.setStroke(this.ctx, 'tomato');
+
+    _draw.Draw.setFill(this.ctx, 'tomato');
+
+    _draw.Draw.circle(this.ctx, this.x, this.y, 10);
+
+    _draw.Draw.rect(this.ctx, x, y, this.width, this.height, true);
   }
 };
 
@@ -269,23 +294,61 @@ Entity.prototype.update = function () {
 
     var _this$velocity = _slicedToArray(this.velocity, 2),
         vx = _this$velocity[0],
-        vy = _this$velocity[1]; // Clamp speeds here.
+        vy = _this$velocity[1];
+
+    if (this.type === 'projectile') {} // Clamp speeds here.
 
 
     x += vx;
-    y += vy;
+    y += vy; // Make sure our ship cant go out of bounds
 
-    if (x + this.width >= this.canvas.width) {
-      x = this.canvas.width - this.width - 1; // vx = -vx;
-    }
+    if (this.screenLocked) {
+      if (x + this.width >= this.canvas.width) {
+        x = this.canvas.width - this.width - 1;
+      }
 
-    if (y + this.height >= this.canvas.height) {
-      y = this.canvas.height - this.height; // vy = -vy;
+      if (x <= 0) x = 1;
+
+      if (y + this.height >= this.canvas.height) {
+        y = this.canvas.height - this.height;
+      }
+
+      if (y <= 0) y = 1;
     }
 
     this.position = [x, y];
     this.velocity = [vx, vy];
   }
+};
+
+Entity.prototype.setVerticalSpeed = function (v) {
+  this.velocity[1] = v;
+};
+
+Entity.prototype.setHorizontalSpeed = function (v) {
+  this.velocity[0] = v;
+};
+
+Entity.prototype.takeDamage = function (dmg) {
+  if (this.hp) {
+    this.hp = this.hp - dmg;
+  }
+
+  if (this.hp <= 0) {
+    this.isDead = true;
+  }
+};
+
+Entity.prototype.collidesWith = function (other) {
+  var _this$position3 = _slicedToArray(this.position, 2),
+      x = _this$position3[0],
+      y = _this$position3[1];
+
+  var _other$position = _slicedToArray(other.position, 2),
+      otherX = _other$position[0],
+      otherY = _other$position[1];
+
+  return x < oxerX + other.width && x + this.width > otherX && y < otherY + other.height && y + this.height > otherY;
 };
 },{"./draw.js":"js/draw.js"}],"js/main.js":[function(require,module,exports) {
 "use strict";
@@ -293,6 +356,14 @@ Entity.prototype.update = function () {
 var _draw = require("./draw.js");
 
 var _entity = require("./entity");
+
+function _slicedToArray(arr, i) { return _arrayWithHoles(arr) || _iterableToArrayLimit(arr, i) || _nonIterableRest(); }
+
+function _nonIterableRest() { throw new TypeError("Invalid attempt to destructure non-iterable instance"); }
+
+function _iterableToArrayLimit(arr, i) { if (!(Symbol.iterator in Object(arr) || Object.prototype.toString.call(arr) === "[object Arguments]")) { return; } var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i["return"] != null) _i["return"](); } finally { if (_d) throw _e; } } return _arr; }
+
+function _arrayWithHoles(arr) { if (Array.isArray(arr)) return arr; }
 
 var canvas = document.querySelector('#gameCanvas');
 var ctx = canvas.getContext('2d');
@@ -302,12 +373,17 @@ var lastTime = new Date().getTime(),
     delta = 0;
 var entities = [];
 var starField = (0, _draw.buildStars)(canvas.width, canvas.height);
-console.log(starField);
 var hero = new _entity.Entity(canvas, ctx, {
-  velocity: [10, 0]
+  position: [canvas.width / 2, canvas.height / 2 + 150],
+  velocity: [0, 0],
+  screenLocked: true,
+  type: 'hero'
 });
+entities.push(hero);
+registerInputEvents();
 
 function gameLoop() {
+  // Fancy browser animation magic
   window.requestAnimationFrame(gameLoop);
   curTime = new Date().getTime();
   delta = curTime - lastTime;
@@ -319,25 +395,68 @@ function gameLoop() {
   }
 }
 
-gameLoop(); // If our canvas exists, start the game loop @ 60 Frames Per Second
-// (This isn't technically the best way to do a game loop but it will serve for now)
-// if (typeof canvas.getContext !== undefined) {
-//   setInterval(gameLoop, 1000 / FPS);
-// }
+gameLoop();
 
 function update() {
-  (0, _draw.updateStarField)(canvas, starField);
-  hero.update();
+  (0, _draw.updateStarField)(canvas, starField); // hero.update();
+
+  entities.forEach(function (e) {
+    return e.update();
+  }); // Clear the bodies
+
+  entities = entities.filter(function (e) {
+    return !e.isDead;
+  });
 }
 
 function render() {
-  hero.render();
-} // setStroke("#333");
-// setFill("tomato")
-// rect(10, 10, 50, 50, true)
-// setStroke("white", width = 0);
-// setFill("green");
-// circle(200, 200, 100)
+  // hero.render(false);
+  entities.forEach(function (e) {
+    return e.render(false);
+  });
+}
+
+function registerInputEvents() {
+  document.addEventListener('keydown', function (e) {
+    if (e.key == 'w' || e.key == 'ArrowUp') {
+      hero.setVerticalSpeed(-5);
+    } else if (e.key == 's' || e.key == 'ArrowDown') {
+      hero.setVerticalSpeed(5);
+    } else if (e.key == 'd' || e.key == 'ArrowRight') {
+      hero.setHorizontalSpeed(5);
+    } else if (e.key == 'a' || e.key == 'ArrowLeft') {
+      hero.setHorizontalSpeed(-5);
+    } else if (e.key == ' ') {
+      fireProjectile(hero, [0, -5]);
+    }
+  });
+  document.addEventListener('keyup', function (e) {
+    var k = e.key;
+
+    if (k == 'w' || k == 'ArrowUp' || k == 's' || k == 'ArrowDown') {
+      hero.setVerticalSpeed(0);
+    } else if (k == 'd' || e.key == 'ArrowRight' || k == 'a' || k == 'ArrowLeft') {
+      hero.setHorizontalSpeed(0);
+    }
+  });
+}
+
+function fireProjectile(ent, vel) {
+  var _ent$position = _slicedToArray(ent.position, 2),
+      x0 = _ent$position[0],
+      y0 = _ent$position[1];
+
+  var originX = x0 + ent.width / 2;
+  var originY = y0 + ent.height / 2;
+  var p = new _entity.Entity(canvas, ctx, {
+    position: [originX, originY],
+    width: 3,
+    height: 3,
+    velocity: vel,
+    type: 'projectile'
+  });
+  entities.push(p);
+}
 },{"./draw.js":"js/draw.js","./entity":"js/entity.js"}],"../../../.config/yarn/global/node_modules/parcel-bundler/src/builtins/hmr-runtime.js":[function(require,module,exports) {
 var global = arguments[3];
 var OVERLAY_ID = '__parcel__error__overlay__';
@@ -366,7 +485,7 @@ var parent = module.bundle.parent;
 if ((!parent || !parent.isParcelRequire) && typeof WebSocket !== 'undefined') {
   var hostname = "" || location.hostname;
   var protocol = location.protocol === 'https:' ? 'wss' : 'ws';
-  var ws = new WebSocket(protocol + '://' + hostname + ':' + "57479" + '/');
+  var ws = new WebSocket(protocol + '://' + hostname + ':' + "56198" + '/');
 
   ws.onmessage = function (event) {
     checkedAssets = {};

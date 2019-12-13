@@ -65,6 +65,15 @@ function image(ctx, src, x, y, w, h) {
   ctx.drawImage(src, x, y, w, h);
 }
 
-const Draw = { setStroke, setFill, rect, circle, clearCanvas, image };
+function triangle(ctx, x, y, w, h) {
+  ctx.beginPath();
+  ctx.moveTo(x, y + h);
+  ctx.lineTo(x + w / 2, y);
+  ctx.lineTo(x + w, y + h);
+  ctx.closePath();
+  ctx.fill();
+}
+
+const Draw = { setStroke, setFill, rect, circle, clearCanvas, image, triangle };
 
 export { Draw, clearCanvas, buildStars, updateStarField };
