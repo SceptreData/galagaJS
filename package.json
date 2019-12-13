@@ -1,4 +1,11 @@
 {
+  "name": "galagajs",
+  "version": "1.0.0",
+  "main": "index.html",
+  "license": "MIT",
+  "scripts": {
+    "build": "parcel build index.html --public-url ./"
+  },
   "devDependencies": {
     "cssnano": "^4.1.10"
   },
